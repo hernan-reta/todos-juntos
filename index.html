@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Todos juntos</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@700;800&display=swap">
+<style>
+  /*
+    Pantalla para Skreens (plantilla "Página web").
+    Uso:  index.html?v=<URL o ID de YouTube>
+    Opcionales:
+      texto=TODOS%20JUNTOS   texto del marco (arriba y en la cinta)
+      abajo=...              texto fijo a la izquierda de la cinta
+      sonido=1               con sonido (por defecto va silenciado, que es lo que permite el autoplay)
+      color=EF5D86           color del marco, en hex sin #
+  */
+  :root { --marco: #EF5D86; --tinta: #16131F; --ambar: #F2A93B; --papel: #F4F1F8; }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html, body { width: 100%; height: 100%; overflow: hidden; background: var(--marco); color: var(--tinta);
+    font-family: 'Bricolage Grotesque', Arial, sans-serif; }
+  .pantalla { position: fixed; inset: 0; display: grid; grid-template-rows: auto 1fr auto; padding: 1.6vh 1.6vw 0; gap: 1.4vh; }
+  .arriba { display: flex; align-items: center; justify-content: space-between; padding: 0 0.6vw; }
+  .titulo { font-weight: 800; font-size: 7.2vh; line-height: 1; letter-spacing: -0.04em; color: var(--tinta); text-transform: uppercase; }
+  .punto { display: inline-block; width: 1.6vh; height: 1.6vh; border-radius: 50%; background: var(--papel); margin-left: 0.6vw;
+    vertical-align: middle; animation: latido 1.6s ease-in-out infinite; }
+  .reloj { font-weight: 700; font-size: 4.4vh; color: var(--tinta); font-variant-numeric: tabular-nums; }
+  .video { position: relative; border-radius: 2vh; overflow: hidden; background: var(--tinta);
+    box-shadow: 0 0 0 0.6vh var(--tinta); min-height: 0;
+    height: 100%; max-width: 100%; aspect-ratio: 16 / 9; justify-self: center; }
+  .video iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .aviso { position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; text-align: center;
+    color: var(--papel); font-size: 3.6vh; padding: 4vw; line-height: 1.3; }
+  .cinta { display: flex; align-items: center; height: 8.4vh; margin: 0 -1.6vw; background: var(--tinta); color: var(--marco); overflow: hidden; }
+  .fijo { flex: none; height: 100%; display: flex; align-items: center; padding: 0 2vw; background: var(--ambar); color: var(--tinta);
+    font-weight: 800; font-size: 3.6vh; text-transform: uppercase; white-space: nowrap; }
+  .fijo:empty { display: none; }
+  .corre { flex: 1; overflow: hidden; white-space: nowrap; }
+  .corre-in { display: inline-block; padding-left: 100%; animation: correr 22s linear infinite;
+    font-weight: 800; font-size: 4.4vh; text-transform: uppercase; letter-spacing: 0.02em; }
+  .corre-in span { color: var(--papel); margin: 0 1.4vw; }
+  @keyframes correr { from { transform: translateX(0); } to { transform: translateX(-100%); } }
+  @keyframes latido { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: .35; transform: scale(.7); } }
+</style>
+</head>
+<body>
+<div class="pantalla">
+  <div class="arriba">
+    <h1 class="titulo"><span id="titulo">Todos juntos</span><span class="punto"></span></h1>
+    <div class="reloj" id="reloj"></div>
+  </div>
+  <div class="video" id="video"></div>
+  <div class="cinta">
+    <div class="fijo" id="fijo"></div>
+    <div class="corre"><div class="corre-in" id="corre"></div></div>
+  </div>
+</div>
+<script>
+(function () {
+  var q = new URLSearchParams(location.search);
+  var texto = (q.get('texto') || 'Todos juntos').trim();
+  var abajo = (q.get('abajo') || '').trim();
+  var color = (q.get('color') || '').replace(/[^0-9a-fA-F]/g, '');
+  var sonido = q.get('sonido') === '1';
+
+  if (color.length === 6 || color.length === 3) document.documentElement.style.setProperty('--marco', '#' + color);
+  document.getElementById('titulo').textContent = texto;
+  document.getElementById('fijo').textContent = abajo;
+
+  // Cinta: el texto repetido, separado por un punto
+  var corre = document.getElementById('corre');
+  for (var i = 0; i < 8; i++) {
+    corre.appendChild(document.createTextNode(texto));
+    var s = document.createElement('span'); s.textContent = '•'; corre.appendChild(s);
+  }
+
+  // Reloj HH:MM de la tele
+  function tic() {
+    var d = new Date();
+    document.getElementById('reloj').textContent =
+      String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+  tic(); setInterval(tic, 10000);
+
+  // Saca el ID de video o de lista de cualquier forma de link de YouTube
+  function parsear(valor) {
+    valor = (valor || '').trim();
+    if (!valor) return null;
+    if (/^[\w-]{11}$/.test(valor)) return { video: valor };
+    try {
+      var u = new URL(valor.indexOf('http') === 0 ? valor : 'https://' + valor);
+      var lista = u.searchParams.get('list');
+      var id = u.searchParams.get('v');
+      if (!id && /youtu\.be$/.test(u.hostname)) id = u.pathname.slice(1, 12);
+      if (!id) { var m = u.pathname.match(/\/(?:embed|shorts|live|v)\/([\w-]{11})/); if (m) id = m[1]; }
+      if (id || lista) return { video: id, lista: lista };
+    } catch (e) {}
+    return null;
+  }
+
+  var caja = document.getElementById('video');
+  var yt = parsear(q.get('v') || q.get('url') || q.get('video'));
+  if (!yt) {
+    caja.innerHTML = '<div class="aviso">Falta el video. Agregá al final de la dirección<br>?v= y el link de YouTube.</div>';
+    return;
+  }
+
+  var p = new URLSearchParams({
+    autoplay: '1', mute: sonido ? '0' : '1', loop: '1', controls: '0', rel: '0',
+    modestbranding: '1', playsinline: '1', iv_load_policy: '3', disablekb: '1'
+  });
+  var src;
+  if (yt.video) {
+    p.set('playlist', yt.lista ? '' : yt.video); // loop de un solo video necesita playlist = el mismo ID
+    if (yt.lista) { p.delete('playlist'); p.set('list', yt.lista); }
+    src = 'https://www.youtube-nocookie.com/embed/' + yt.video + '?' + p.toString();
+  } else {
+    p.set('list', yt.lista);
+    src = 'https://www.youtube-nocookie.com/embed/videoseries?' + p.toString();
+  }
+
+  var f = document.createElement('iframe');
+  f.src = src;
+  f.allow = 'autoplay; encrypted-media; picture-in-picture';
+  f.referrerPolicy = 'strict-origin-when-cross-origin';
+  f.title = 'Video';
+  caja.appendChild(f);
+})();
+</script>
+</body>
+</html>
